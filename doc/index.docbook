@@ -1257,6 +1257,38 @@ Context menu actions like Rename Bookmarks etc.)
 					</para>
 				</note>
 			</sect2>
+			<sect2 id="annotations-comments">
+				<title>Commenting on text</title>
+				<para>
+					Comments are anchored to a passage of text and listed in a panel next to the page,
+					similar to the review comments of a word processor.
+					There are two ways to start a comment:
+					with <menuchoice><guimenu>Tools</guimenu><guimenuitem>Area Selection</guimenuitem></menuchoice>,
+					drag over the text and choose <guimenuitem>Add Comment</guimenuitem> in the menu that appears when you release the mouse;
+					or with <menuchoice><guimenu>Tools</guimenu><guimenuitem>Text Selection</guimenuitem></menuchoice>,
+					select the text, then click the selection with the &RMB; and choose <guimenuitem>Add Comment</guimenuitem>.
+					The selection menu only offers this entry when the page has a text layer and the drag actually covers text.
+					The comment panel opens at the right of the page with an empty comment waiting for your text.
+					Save it with <guibutton>Save</guibutton>; if you cancel an empty comment, it is discarded.
+				</para>
+				<para>
+					&okular; records the author configured in <menuchoice><guimenu>Settings</guimenu><guimenuitem>Configure &okular;...</guimenuitem></menuchoice>
+					under <guilabel>Annotations</guilabel>, together with the date and time the comment was written
+					and last changed. Both are shown on the comment card.
+				</para>
+				<para>
+					Use the buttons on a comment card to edit the text, delete the comment, or mark it as resolved.
+					Resolved comments are hidden from the panel so the list only shows the comments that still need attention.
+					They stay in the document and can be shown again by enabling
+					<guilabel>Show resolved comments</guilabel> at the top of the panel, where they can be reopened or deleted.
+					<guibutton>Page 1</guibutton> jumps to the passage the comment is attached to.
+				</para>
+				<para>
+					The comment panel is toggled from <menuchoice><guimenu>Settings</guimenu><guimenuitem>Show Comments Panel</guimenuitem></menuchoice>
+					and opens automatically when a comment is created.
+					Comments are annotations, so they are saved with the document like any other annotation.
+				</para>
+			</sect2>
 		</sect1>
 		<sect1 id="bookmark-management">
 			<title>Bookmark Management</title>

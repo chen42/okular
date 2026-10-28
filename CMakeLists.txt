@@ -518,6 +518,7 @@ if(BUILD_DESKTOP)
     part/bookmarklist.cpp
     part/certificateviewer.cpp
     part/colormodemenu.cpp
+    part/commentpanel.cpp
     part/cursorwraphelper.cpp
     part/drawingtoolactions.cpp
     part/fileprinterpreview.cpp

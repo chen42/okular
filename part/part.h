@@ -55,6 +55,7 @@ class KToggleFullScreenAction;
 class QTemporaryFile;
 class QAction;
 class QJsonObject;
+class QSplitter;
 namespace KParts
 {
 class GUIActivateEvent;
@@ -72,6 +73,7 @@ class MiniBar;
 class MiniBarLogic;
 class FileKeeper;
 class Reviews;
+class CommentPanel;
 class BookmarkList;
 class DrawingToolActions;
 class Layers;
@@ -117,6 +119,7 @@ class OKULARPART_EXPORT Part : public KParts::ReadWritePart, public Okular::Docu
     Q_INTERFACES(Okular::ViewerInterface)
 
     friend class PartTest;
+    friend class CommentPanelTest;
 
 public:
     // Default constructor
@@ -240,6 +243,8 @@ protected Q_SLOTS:
     void slotShowProperties();
     void slotShowEmbeddedFiles();
     void slotShowLeftPanel();
+    void slotShowCommentPanel();
+    void slotAddComment(int pageNumber);
     void slotShowBottomBar();
     void slotShowPresentation();
     void slotHidePresentation();
@@ -378,6 +383,8 @@ private:
     QPointer<PresentationWidget> m_presentationWidget;
     QPointer<PageSizeLabel> m_pageSizeLabel;
     QPointer<Reviews> m_reviewsWidget;
+    QPointer<CommentPanel> m_commentPanel;
+    QSplitter *m_viewSplitter = nullptr;
     QPointer<BookmarkList> m_bookmarkList;
     QPointer<Layers> m_layers;
     QPointer<SignaturePanel> m_signaturePanel;
@@ -434,6 +441,7 @@ private:
     KHamburgerMenu *m_hamburgerMenuAction;
     KToggleAction *m_showMenuBarAction;
     KToggleAction *m_showLeftPanel;
+    KToggleAction *m_showCommentPanel;
     KToggleAction *m_showBottomBar;
     QAction *m_showSignaturePanel;
     KToggleFullScreenAction *m_showFullScreenAction;

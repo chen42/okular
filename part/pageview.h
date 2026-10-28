@@ -176,6 +176,11 @@ Q_SIGNALS:
     void signingStarted();
     void signingFinished();
 
+    /**
+     * Emitted when the user asks to comment the text selected on @p pageNumber.
+     */
+    void addCommentRequested(int pageNumber);
+
 protected:
     bool event(QEvent *event) override;
 

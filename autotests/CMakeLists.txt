@@ -31,6 +31,11 @@ if(Poppler_Qt6_FOUND)
             TEST_NAME "parttest"
             LINK_LIBRARIES Qt6::Widgets Qt6::Test Qt6::Xml okularcore okularpart
         )
+
+        ecm_add_test(commentpaneltest.cpp
+            TEST_NAME "commentpaneltest"
+            LINK_LIBRARIES Qt6::Widgets Qt6::Test Qt6::Xml okularcore okularpart
+        )
     endif()
 
     ecm_add_test(visibilitytest.cpp

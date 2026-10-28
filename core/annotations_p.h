@@ -64,6 +64,7 @@ public:
     QString m_uniqueName;
     QDateTime m_modifyDate;
     QDateTime m_creationDate;
+    Annotation::CommentState m_commentState;
 
     int m_flags;
     NormalizedRect m_boundary;

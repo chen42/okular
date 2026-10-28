@@ -558,6 +558,7 @@ Annotation::RevisionType Annotation::Revision::type() const
 
 AnnotationPrivate::AnnotationPrivate()
     : m_page(nullptr)
+    , m_commentState(Annotation::NotAComment)
     , m_flags(0)
     , m_disposeFunc(nullptr)
 {
@@ -648,6 +649,18 @@ QDateTime Annotation::creationDate() const
 {
     Q_D(const Annotation);
     return d->m_creationDate;
+}
+
+void Annotation::setCommentState(CommentState state)
+{
+    Q_D(Annotation);
+    d->m_commentState = state;
+}
+
+Annotation::CommentState Annotation::commentState() const
+{
+    Q_D(const Annotation);
+    return d->m_commentState;
 }
 
 void Annotation::setFlags(int flags)
@@ -840,6 +853,9 @@ void Annotation::store(QDomNode &annNode, QDomDocument &document) const
     if (d->m_creationDate.isValid()) {
         e.setAttribute(QStringLiteral("creationDate"), d->m_creationDate.toString(Qt::ISODate));
     }
+    if (d->m_commentState != NotAComment) {
+        e.setAttribute(QStringLiteral("commentState"), QString::number(d->m_commentState));
+    }
 
     // store -other- attributes
     if (d->m_flags) { // Strip internal flags
@@ -1017,6 +1033,9 @@ void AnnotationPrivate::setAnnotationProperties(const QDomNode &node)
     }
     if (e.hasAttribute(QStringLiteral("creationDate"))) {
         m_creationDate = QDateTime::fromString(e.attribute(QStringLiteral("creationDate")), Qt::ISODate);
+    }
+    if (e.hasAttribute(QStringLiteral("commentState"))) {
+        m_commentState = static_cast<Annotation::CommentState>(e.attribute(QStringLiteral("commentState")).toInt());
     }
 
     // parse -other- attributes

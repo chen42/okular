@@ -2891,6 +2891,9 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
 
         // if we support text generation
         QString selectedText;
+        // The area a comment can be anchored to, taken from the first page the selection covers
+        int commentedPage = -1;
+        Okular::RegularAreaRect commentedArea;
         if (d->document->supportsSearching()) {
             // grab text in selection by extracting it from all intersected pages
             const Okular::Page *okularPage = nullptr;
@@ -2913,6 +2916,10 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
                     Okular::RegularAreaRect rects;
                     rects.append(Okular::NormalizedRect(relativeRect, item->uncroppedWidth(), item->uncroppedHeight()));
                     selectedText += okularPage->text(&rects);
+                    if (commentedPage == -1) {
+                        commentedPage = item->pageNumber();
+                        commentedArea = rects;
+                    }
                 }
             }
         }
@@ -2922,6 +2929,7 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
         menu.setObjectName(QStringLiteral("PopupMenu"));
         QAction *textToClipboard = nullptr;
         QAction *textWithoutLineBreaksToClipboard = nullptr;
+        QAction *addComment = nullptr;
 #if HAVE_SPEECH
         const QAction *speakText = nullptr;
 #endif
@@ -2933,6 +2941,10 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
             textToClipboard->setObjectName(QStringLiteral("CopyTextToClipboard"));
             textWithoutLineBreaksToClipboard = menu.addAction(QIcon::fromTheme(QStringLiteral("edit-copy-without-line-breaks")), i18n("Copy Text (Without line breaks)"));
             textWithoutLineBreaksToClipboard->setObjectName(QStringLiteral("CopyTextWithoutLineBreaksToClipboard"));
+            if (commentedPage != -1 && d->document->isAllowed(Okular::AllowNotes)) {
+                addComment = menu.addAction(QIcon::fromTheme(QStringLiteral("insert-comment")), i18n("Add Comment"));
+                addComment->setObjectName(QStringLiteral("AddComment"));
+            }
             bool copyAllowed = d->document->isAllowed(Okular::AllowCopy);
             if (!copyAllowed) {
                 textToClipboard->setEnabled(false);
@@ -3008,6 +3020,12 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
                     if (cb->supportsSelection()) {
                         cb->setText(Okular::removeLineBreaks(selectedText), QClipboard::Selection);
                     }
+                } else if (choice == addComment && commentedPage != -1) {
+                    // [1.3] anchor a comment on the dragged area: turn it into a text selection
+                    // so the comment keeps the exact position and the marked text
+                    d->document->setPageTextSelection(commentedPage, std::make_unique<Okular::RegularAreaRect>(commentedArea), palette().color(QPalette::Active, QPalette::Highlight));
+                    d->pagesWithTextSelection.insert(commentedPage);
+                    Q_EMIT addCommentRequested(commentedPage);
                 }
 #if HAVE_SPEECH
                 else if (choice == speakText) {
@@ -3135,6 +3153,7 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
                 QAction *httpLink = nullptr;
                 QAction *textToClipboard = nullptr;
                 QAction *textWithoutLineBreaksToClipboard = nullptr;
+                QAction *addComment = nullptr;
                 QString url;
 
                 QMenu *menu = createProcessLinkMenu(item, eventPos);
@@ -3148,6 +3167,11 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
                 if (item->page()->textSelection()) {
                     if (!menu) {
                         menu = new QMenu(this);
+                    }
+                    if (d->document->isAllowed(Okular::AllowNotes)) {
+                        addComment = menu->addAction(QIcon::fromTheme(QStringLiteral("insert-comment")), i18n("Add Comment"));
+                        addComment->setObjectName(QStringLiteral("AddComment"));
+                        menu->addSeparator();
                     }
                     textToClipboard = menu->addAction(QIcon::fromTheme(QStringLiteral("edit-copy")), i18n("Copy Text"));
                     textWithoutLineBreaksToClipboard = menu->addAction(QIcon::fromTheme(QStringLiteral("edit-copy-without-line-breaks")), i18n("Copy Text (Without line breaks)"));
@@ -3184,7 +3208,9 @@ void PageView::mouseReleaseEvent(QMouseEvent *e)
                     const QAction *choice = menu->exec(e->globalPosition().toPoint());
                     // check if the user really selected an action
                     if (choice) {
-                        if (choice == textToClipboard) {
+                        if (choice == addComment) {
+                            Q_EMIT addCommentRequested(item->pageNumber());
+                        } else if (choice == textToClipboard) {
                             copyTextSelection(TextCopyMode::AsProvided);
                         } else if (choice == textWithoutLineBreaksToClipboard) {
                             copyTextSelection(TextCopyMode::WithoutLineBreaks);

@@ -277,6 +277,10 @@
   <entry key="ShowLeftPanel" type="Bool" >
    <default>true</default>
   </entry>
+  <entry key="ShowCommentPanel" type="Bool" >
+   <default>false</default>
+  </entry>
+  <entry key="CommentPanelSplitterSizes" type="IntList" />
   <entry key="SplitterSizes" type="IntList" />
   <entry key="ShowBottomBar" type="Bool" >
    <default>false</default>

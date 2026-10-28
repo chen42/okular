@@ -52,6 +52,7 @@
 #include <QScrollBar>
 #include <QSlider>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStandardPaths>
 #include <QTemporaryFile>
 #include <QTimer>
@@ -97,6 +98,7 @@
 #include "aboutdata.h"
 #include "annotationpopup.h"
 #include "bookmarklist.h"
+#include "commentpanel.h"
 #include "core/action.h"
 #include "core/annotations.h"
 #include "core/bookmarkmanager.h"
@@ -484,9 +486,31 @@ Part::Part(QObject *parent, const QVariantList &args)
     rightLayout->addWidget(m_signatureInProgressMessage);
     m_pageView = new PageView(rightContainer, m_document);
     rightContainer->setFocusProxy(m_pageView);
+
+    // [page view] | [comment panel], the panel is hidden until the user asks for it
+    m_commentPanel = new CommentPanel(rightContainer, m_document);
+    m_commentPanel->setVisible(false);
+    m_viewSplitter = new QSplitter(Qt::Horizontal, rightContainer);
+    m_viewSplitter->setChildrenCollapsible(false);
+    m_viewSplitter->setHandleWidth(8); // easy to grab with the mouse
+    m_viewSplitter->addWidget(m_pageView);
+    m_viewSplitter->addWidget(m_commentPanel);
+    m_viewSplitter->setStretchFactor(0, 1);
+    m_viewSplitter->setStretchFactor(1, 0);
+    const QList<int> commentPanelSplitterSizes = Okular::Settings::commentPanelSplitterSizes();
+    if (commentPanelSplitterSizes.size() == 2) {
+        m_viewSplitter->setSizes(commentPanelSplitterSizes);
+    }
+    connect(m_viewSplitter, &QSplitter::splitterMoved, this, [this](int /*pos*/, int index) {
+        if (index == 1) {
+            Okular::Settings::setCommentPanelSplitterSizes(m_viewSplitter->sizes());
+            Okular::Settings::self()->save();
+        }
+    });
     QMetaObject::invokeMethod(m_pageView, "setFocus", Qt::QueuedConnection); // usability setting
     //    m_splitter->setFocusProxy(m_pageView);
     connect(m_pageView.data(), &PageView::rightClick, this, &Part::slotShowMenu);
+    connect(m_pageView.data(), &PageView::addCommentRequested, this, &Part::slotAddComment);
     connect(m_pageView, &PageView::triggerSearch, this, [this](const QString &searchText) {
         m_findBar->startSearch(searchText);
         slotShowFindBar();
@@ -496,7 +520,7 @@ Part::Part(QObject *parent, const QVariantList &args)
     connect(m_document, &Document::notice, this, &Part::noticeMessage);
     connect(m_document, &Document::sourceReferenceActivated, this, &Part::slotHandleActivatedSourceReference);
     connect(m_pageView.data(), &PageView::fitWindowToPage, this, &Part::fitWindowToPage);
-    rightLayout->addWidget(m_pageView);
+    rightLayout->addWidget(m_viewSplitter);
     m_layers->setPageView(m_pageView);
     m_signaturePanel->setPageView(m_pageView);
     m_findBar = new FindBar(m_document, rightContainer);
@@ -739,6 +763,7 @@ void Part::setupViewerActions()
     m_printPreview->setEnabled(false);
 
     m_showLeftPanel = nullptr;
+    m_showCommentPanel = nullptr;
     m_showBottomBar = nullptr;
     m_showSignaturePanel = nullptr;
 
@@ -867,6 +892,14 @@ void Part::setupActions()
     m_showLeftPanel->setChecked(Okular::Settings::showLeftPanel());
     slotShowLeftPanel();
 
+    m_showCommentPanel = ac->add<KToggleAction>(QStringLiteral("show_comments"));
+    m_showCommentPanel->setText(i18n("Show C&omments Panel"));
+    m_showCommentPanel->setIcon(QIcon::fromTheme(QStringLiteral("insert-comment")));
+    connect(m_showCommentPanel, &QAction::toggled, this, &Part::slotShowCommentPanel);
+    ac->setDefaultShortcut(m_showCommentPanel, QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C));
+    m_showCommentPanel->setChecked(Okular::Settings::showCommentPanel());
+    slotShowCommentPanel();
+
     m_showBottomBar = ac->add<KToggleAction>(QStringLiteral("show_bottombar"));
     m_showBottomBar->setText(i18n("Show &Page Bar"));
     connect(m_showBottomBar, &QAction::toggled, this, &Part::slotShowBottomBar);
@@ -975,6 +1008,7 @@ Part::~Part()
     delete m_toc;
     delete m_layers;
     delete m_pageView;
+    delete m_commentPanel;
     delete m_thumbnailList;
     delete m_miniBar;
     delete m_pageNumberTool;
@@ -2026,6 +2060,35 @@ void Part::slotShowLeftPanel()
     Okular::Settings::self()->save();
     // show/hide left panel
     m_sidebar->setSidebarVisibility(showLeft);
+}
+
+void Part::slotShowCommentPanel()
+{
+    const bool showComments = m_showCommentPanel->isChecked();
+    Okular::Settings::setShowCommentPanel(showComments);
+    Okular::Settings::self()->save();
+    m_commentPanel->setVisible(showComments);
+    if (showComments) {
+        QList<int> sizes = m_viewSplitter->sizes();
+        if (sizes.size() == 2 && sizes.at(1) < m_commentPanel->minimumWidth()) {
+            // Give the panel a sensible width the first time it is shown
+            const int total = qMax(m_viewSplitter->width(), m_commentPanel->minimumWidth() * 2);
+            const int panelWidth = qMin(360, total / 2);
+            sizes[0] = total - panelWidth;
+            sizes[1] = panelWidth;
+            m_viewSplitter->setSizes(sizes);
+        }
+    }
+}
+
+void Part::slotAddComment(int pageNumber)
+{
+    if (m_showCommentPanel && !m_showCommentPanel->isChecked()) {
+        m_showCommentPanel->setChecked(true);
+    } else if (!m_showCommentPanel) {
+        m_commentPanel->setVisible(true);
+    }
+    m_commentPanel->addCommentForSelection(pageNumber);
 }
 
 void Part::slotShowBottomBar()
@@ -3190,6 +3253,7 @@ void Part::showMenu(const Okular::Page *page, const QPoint point, const QString 
     const QAction *removeBookmark = nullptr;
     const QAction *fitPageWidth = nullptr;
     const QAction *pasteAnnotation = nullptr;
+    const QAction *addComment = nullptr;
     bool hasPastePoint = false;
     Okular::NormalizedPoint pastePoint;
     if (page) {
@@ -3210,6 +3274,9 @@ void Part::showMenu(const Okular::Page *page, const QPoint point, const QString 
             int targetPageNumber = -1;
             hasPastePoint = m_pageView->mapGlobalPosToPagePoint(point, &targetPageNumber, &pastePoint) && targetPageNumber == page->number();
             pasteAnnotation = popup.addAction(QIcon::fromTheme(QStringLiteral("edit-paste")), i18n("Paste Annotation"));
+        }
+        if (m_document->isAllowed(Okular::AllowNotes) && page->textSelection() && !page->textSelection()->isEmpty()) {
+            addComment = popup.addAction(QIcon::fromTheme(QStringLiteral("insert-comment")), i18n("Add Comment"));
         }
         popup.addAction(m_prevBookmark);
         popup.addAction(m_nextBookmark);
@@ -3254,6 +3321,8 @@ void Part::showMenu(const Okular::Page *page, const QPoint point, const QString 
             } else if (res == pasteAnnotation) {
                 AnnotationPopup annotPopup(m_document, AnnotationPopup::SingleAnnotationMode, widget());
                 annotPopup.pasteAnnotationToPage(page->number(), hasPastePoint ? &pastePoint : nullptr);
+            } else if (res == addComment) {
+                slotAddComment(page->number());
             }
         }
     }
@@ -3376,6 +3445,9 @@ void Part::slotUpdateHamburgerMenu()
     menu->addAction(m_copyWithoutLineBreaks);
     menu->addAction(m_find);
     menu->addAction(m_showLeftPanel);
+    if (m_showCommentPanel) {
+        menu->addAction(m_showCommentPanel);
+    }
     if (!visibleMainToolbar || visibleMainToolbar->actions().contains(ac->action(QStringLiteral("annotation_favorites")))) {
         menu->addAction(ac->action(QStringLiteral("mouse_toggle_annotate")));
     }

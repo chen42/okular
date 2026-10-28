@@ -186,6 +186,20 @@ public:
     };
 
     /**
+     * Describes the role of an annotation in the document comment workflow.
+     *
+     * Annotations flagged with OpenComment or ResolvedComment are listed in the
+     * document comment panel. The state is stored together with the annotation.
+     *
+     * @since 26.11
+     */
+    enum CommentState {
+        NotAComment = 0,     ///< The annotation is not a comment
+        OpenComment = 1,     ///< The annotation holds a comment that is still open
+        ResolvedComment = 2  ///< The annotation holds a comment that has been resolved
+    };
+
+    /**
      * Describes the type of additional actions.
      *
      * @since 0.16 (KDE 4.10)
@@ -269,6 +283,23 @@ public:
      * Returns the creation date of the annotation.
      */
     QDateTime creationDate() const;
+
+    /**
+     * Sets the comment @p state of the annotation.
+     *
+     * Annotations whose state is not NotAComment are shown in the document
+     * comment panel, anchored at the text they mark.
+     *
+     * @since 26.11
+     */
+    void setCommentState(CommentState state);
+
+    /**
+     * Returns the comment state of the annotation.
+     * @see setCommentState
+     * @since 26.11
+     */
+    CommentState commentState() const;
 
     /**
      * Sets the @p flags of the annotation.

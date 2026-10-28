@@ -93,6 +93,7 @@
   <Menu name="settings"><text>&amp;Settings</text>
     <Action name="colorscheme_menu" group="show_merge"/>
     <Action name="show_leftpanel" group="show_merge"/>
+    <Action name="show_comments" group="show_merge"/>
     <Action name="show_bottombar" group="show_merge"/>
     <Action name="options_configure_generators" group="configure_merge"/>
     <Action name="options_configure" group="configure_merge"/>
